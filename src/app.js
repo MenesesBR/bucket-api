@@ -53,9 +53,12 @@ This API provides endpoints for uploading, downloading, and managing files on th
 - **File Validation**: Type and size restrictions
 
 ### Supported File Types
-- **Images**: JPEG, PNG, GIF, WebP
-- **Documents**: PDF, TXT, JSON, CSV
-- **Spreadsheets**: XLS, XLSX
+- **Text**: plain, html, css, javascript, csv, xml, markdown
+- **Application**: json, xml, pdf, zip, office formats, binary and form-urlencoded
+- **Image**: png, jpeg, gif, svg, webp, bmp, ico, tiff
+- **Audio**: mpeg, wav, ogg, webm, aac
+- **Video**: mp4, mpeg, webm, ogg, avi, mov
+- **Multipart, Font, Message and Model** MIME types
 
 ### File Size Limits
 - Maximum file size: 10MB per file

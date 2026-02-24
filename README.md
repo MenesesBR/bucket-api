@@ -107,8 +107,14 @@ Authorization: Bearer your-token
 ## 📁 Tipos de Arquivo Suportados
 
 - **Imagens**: JPEG, PNG, GIF, WebP
-- **Documentos**: PDF, TXT, JSON, CSV
-- **Planilhas**: XLS, XLSX
+- **Texto**: plain, html, css, javascript, csv, xml, markdown
+- **Application**: json, xml, pdf, zip, office formats, binary e form-urlencoded
+- **Imagem**: png, jpeg, gif, svg, webp, bmp, ico, tiff
+- **Áudio**: mpeg, wav, ogg, webm, aac
+- **Vídeo**: mp4, mpeg, webm, ogg, avi, mov
+- **Multipart, Font, Message e Model**: tipos MIME aceitos para compatibilidade
+
+Lista completa: `src/config/allowedMimeTypes.js`
 
 ## ⚠️ Limitações
 

@@ -5,11 +5,18 @@ const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const logger = require('../config/logger');
 const environment = require('../config/environment');
+const allowedMimeTypes = require('../config/allowedMimeTypes');
 const { validateFilename, validateFileUpload } = require('../middleware/validation');
 
 const router = express.Router();
 const VOLUME_PATH = environment.volumePath;
 const BASE_URL = environment.baseUrl;
+const storageRootPath = path.resolve(__dirname, '..', VOLUME_PATH);
+
+function isInsideStorageRoot(targetPath) {
+  const relativePath = path.relative(storageRootPath, targetPath);
+  return relativePath !== '' && !relativePath.startsWith('..') && !path.isAbsolute(relativePath);
+}
 
 function authenticate(req, res, next) {
   try {
@@ -43,13 +50,13 @@ function authenticate(req, res, next) {
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     try {
-      const dir = path.join(__dirname, '..', VOLUME_PATH);
+      const dir = storageRootPath;
       fs.mkdirSync(dir, { recursive: true });
       cb(null, dir);
     } catch (error) {
       logger.error('Error creating directory', { 
         error: error.message, 
-        path: path.join(__dirname, '..', VOLUME_PATH)
+        path: storageRootPath
       });
       cb(error);
     }
@@ -74,26 +81,15 @@ const upload = multer({
     files: 1
   },
   fileFilter: (req, file, cb) => {
-    const allowedMimeTypes = [
-      'image/jpeg',
-      'image/png',
-      'image/gif',
-      'image/webp',
-      'application/pdf',
-      'text/plain',
-      'application/json',
-      'text/csv',
-      'application/vnd.ms-excel',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    ];
-
     if (!allowedMimeTypes.includes(file.mimetype)) {
       logger.warn('File type rejected', { 
         mimetype: file.mimetype, 
         originalname: file.originalname,
         ip: req.ip
       });
-      return cb(new Error('Unsupported file type'), false);
+      const error = new Error('Unsupported file type');
+      error.code = 'UNSUPPORTED_FILE_TYPE';
+      return cb(error, false);
     }
 
     cb(null, true);
@@ -169,9 +165,12 @@ const upload = multer({
  *       Upload a single file to the server. The file will be stored with a unique UUID filename.
  *       
  *       **Supported file types:**
- *       - Images: JPEG, PNG, GIF, WebP
- *       - Documents: PDF, TXT, JSON, CSV
- *       - Spreadsheets: XLS, XLSX
+ *       - Text: plain, html, css, javascript, csv, xml, markdown
+ *       - Application: json, xml, pdf, zip, office formats, binary and form-urlencoded
+ *       - Image: png, jpeg, gif, svg, webp, bmp, ico, tiff
+ *       - Audio: mpeg, wav, ogg, webm, aac
+ *       - Video: mp4, mpeg, webm, ogg, avi, mov
+ *       - Multipart, Font, Message, and Model MIME types
  *       
  *       **File size limit:** 10MB
  *       
@@ -377,7 +376,15 @@ router.delete('/delete',
   (req, res) => {
     try {
       const filename = req.filename;
-      const filePath = path.join(__dirname, '..', VOLUME_PATH, filename);
+      const filePath = path.resolve(storageRootPath, filename);
+
+      if (!isInsideStorageRoot(filePath)) {
+        logger.warn('Path traversal attempt blocked during deletion', { filename, ip: req.ip });
+        return res.status(400).json({
+          error: 'Invalid parameter',
+          message: 'filename must be a valid file name without path separators'
+        });
+      }
 
       if (!fs.existsSync(filePath)) {
         logger.warn('File not found for deletion', { filename, ip: req.ip });
@@ -487,7 +494,7 @@ router.delete('/delete',
  */
 router.use('/files', (req, res, next) => {
   try {
-    const staticPath = path.join(__dirname, '..', VOLUME_PATH);
+    const staticPath = storageRootPath;
     const filePath = path.join(staticPath, req.path);
     
     if (!fs.existsSync(filePath)) {
@@ -512,6 +519,6 @@ router.use('/files', (req, res, next) => {
       message: 'An error occurred while accessing the file'
     });
   }
-}, express.static(path.join(__dirname, '..', VOLUME_PATH)));
+}, express.static(storageRootPath));
 
 module.exports = router; 

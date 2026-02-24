@@ -57,6 +57,13 @@ const errorHandler = (err, req, res, next) => {
     });
   }
 
+  if (err.code === 'UNSUPPORTED_FILE_TYPE') {
+    return res.status(400).json({
+      error: 'Unsupported file type',
+      message: 'The uploaded file type is not supported'
+    });
+  }
+
   res.status(500).json({
     error: 'Internal server error',
     message: 'An unexpected error occurred'
